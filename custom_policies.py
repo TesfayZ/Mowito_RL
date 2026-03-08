@@ -11,7 +11,7 @@ Contains:
 
 These modifications are orthogonal and compose cleanly:
 - RWAI modifies critic initialization
-- Adaptive scaling modifies actor forward pass
+- Adaptive gradient scaling modifies actor forward pass
 """
 
 import torch as th
@@ -298,7 +298,7 @@ class AdaptiveGradientScaler(nn.Module):
         return (x - self.g_mean) / half_range * self.target_range
 
 
-# ── Custom TD3/DDPG Actors with Adaptive Scaling ────────────────────────────
+# ── Custom TD3/DDPG Actors with Adaptive Gradient Scaling ────────────────────
 
 
 class AdaptiveScalingTD3Actor(td3_policies.Actor):
@@ -319,7 +319,7 @@ class AdaptiveScalingTD3Actor(td3_policies.Actor):
             self.mu = nn.Sequential(*layers)
 
 
-# ── Custom SAC Actor with Adaptive Scaling ───────────────────────────────────
+# ── Custom SAC Actor with Adaptive Gradient Scaling ──────────────────────────
 
 
 class AdaptiveScalingSACActor(sac_policies.Actor):
@@ -347,7 +347,7 @@ class AdaptiveScalingSACActor(sac_policies.Actor):
         latent_pi = self.latent_pi(features)
         mean_actions = self.mu(latent_pi)
 
-        # Apply adaptive scaling instead of Hardtanh clip
+        # Apply adaptive gradient scaling instead of Hardtanh clip
         mean_actions = self.adaptive_scaler(mean_actions)
 
         if self.use_sde:
@@ -357,7 +357,7 @@ class AdaptiveScalingSACActor(sac_policies.Actor):
         return mean_actions, log_std, {}
 
 
-# ── Adaptive Scaling Policy Classes ──────────────────────────────────────────
+# ── Adaptive Gradient Scaling Policy Classes ─────────────────────────────────
 
 
 class AdaptiveScalingSACPolicy(SACPolicy):
@@ -381,7 +381,7 @@ class AdaptiveScalingTD3Policy(TD3Policy):
 
 
 class AdaptiveScalingRWAISACPolicy(SACPolicy):
-    """SAC policy with adaptive scaling actor + scaled RWAI v2 critic."""
+    """SAC policy with adaptive gradient scaling actor + scaled RWAI v2 critic."""
 
     def __init__(self, *args, q_min: float = 0.0, q_max: float = 500.0, **kwargs):
         self._q_min = q_min
@@ -406,7 +406,7 @@ class AdaptiveScalingRWAISACPolicy(SACPolicy):
 
 
 class AdaptiveScalingRWAITD3Policy(TD3Policy):
-    """TD3/DDPG policy with adaptive scaling actor + scaled RWAI v2 critic."""
+    """TD3/DDPG policy with adaptive gradient scaling actor + scaled RWAI v2 critic."""
 
     def __init__(self, *args, q_min: float = 0.0, q_max: float = 500.0, **kwargs):
         self._q_min = q_min

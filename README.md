@@ -1,8 +1,8 @@
 # Combinatorial Ablation of Training Stabilization Techniques for Off-Policy Deep RL
 
-A comprehensive **110-experiment** study evaluating how five complementary techniques — critic initialization, gradient clipping, adaptive scaling, Q-value bounding, and prioritized experience replay — affect off-policy algorithm performance on hard-exploration continuous control tasks.
+A comprehensive **110-experiment** study evaluating how five complementary techniques — critic initialization, gradient clipping, adaptive gradient scaling, Q-value bounding, and prioritized experience replay — affect off-policy algorithm performance on hard-exploration continuous control tasks.
 
-We train SAC, TD3, and DDPG agents (plus PPO baselines) to **swing up and balance** inverted pendulums, testing all **2^4 = 16 combinations** of four techniques per algorithm-environment pair. The full combinatorial ablation reveals that technique effectiveness is **strongly algorithm-dependent**: QBound improves SAC by +45% but has no effect on TD3; Adaptive Scaling rescues TD3 from exploration failure but destroys SAC.
+We train SAC, TD3, and DDPG agents (plus PPO baselines) to **swing up and balance** inverted pendulums, testing all **2^4 = 16 combinations** of four techniques per algorithm-environment pair. The full combinatorial ablation reveals that technique effectiveness is **strongly algorithm-dependent**: QBound improves SAC by +45% but has no effect on TD3; Adaptive Gradient Scaling rescues TD3 from exploration failure but destroys SAC.
 
 ## Techniques
 
@@ -12,7 +12,7 @@ All off-policy experiments include **Gradient Clipping** (`max_grad_norm=1.0`) a
 
 2. **PER (Prioritized Experience Replay)** — Proportional prioritization with sum-tree sampling, IS weight correction (beta annealed 0.4→1.0), and max-priority decay. Focuses updates on transitions with highest TD error.
 
-3. **[AS (Adaptive Scaling)](https://github.com/TesfayZ/gradient_asymetry_AND_activation_saturation)** (Gebrekidan) — Tracks running mean/std of pre-tanh activations (EMA, decay=0.99) and rescales them to `[-target_range, +target_range]`, keeping them in the high-gradient region of tanh to prevent saturation. Uses `k_std=2.5` (captures ~99% of distribution).
+3. **[AS (Adaptive Gradient Scaling)](https://github.com/TesfayZ/gradient_asymetry_AND_activation_saturation)** (Gebrekidan) — Tracks running mean/std of pre-tanh activations (EMA, decay=0.99) and rescales them to `[-target_range, +target_range]`, keeping them in the high-gradient region of tanh to prevent saturation. Uses `k_std=2.5` (captures ~99% of distribution).
 
 4. **[QBound](https://github.com/TesfayZ/QBound)** (Gebrekidan) — Two-stage hard clipping on critic TD targets `[Q_min, Q_max]` and soft (softplus, beta=5.0) clipping on actor Q-values, constraining estimates within the theoretically achievable return range.
 
@@ -31,7 +31,7 @@ Both environments use custom **Lagrangian mechanics** (no external physics engin
 ├── envs/
 │   ├── cartpole_swingup.py            # Single pendulum (Lagrangian dynamics + RK4)
 │   └── double_cartpole_swingup.py     # Double pendulum (3x3 mass matrix + RK4)
-├── custom_policies.py                 # RWAI + adaptive scaling policy classes
+├── custom_policies.py                 # RWAI + adaptive gradient scaling policy classes
 ├── gc_algorithms.py                   # Gradient-clipped algorithm subclasses
 ├── qbound.py                          # QBound algorithm subclasses
 ├── per_algorithms.py                  # PER algorithm subclasses (legacy)
@@ -143,9 +143,9 @@ All variants include gradient clipping (`max_grad_norm=1.0`) as standard.
 
 Experiments using RWAI v2 or QBound set `norm_reward=False` to align raw Q-values with known bounds. Dedicated `_no_norm_reward` baselines (6 experiments) enable fair comparison by isolating the effect of disabling reward normalization. Legacy RWAI v1 experiments (`_rwinit` suffix) are retained for diagnostic reference.
 
-## How AS (Adaptive Scaling) Works
+## How AS (Adaptive Gradient Scaling) Works
 
-**[Adaptive Scaling](https://github.com/TesfayZ/gradient_asymetry_AND_activation_saturation)** (Gebrekidan) addresses tanh saturation in actor networks. When pre-activation values drift far from zero, tanh gradients vanish, stalling learning.
+**[Adaptive Gradient Scaling](https://github.com/TesfayZ/gradient_asymetry_AND_activation_saturation)** (Gebrekidan) addresses tanh saturation in actor networks. When pre-activation values drift far from zero, tanh gradients vanish, stalling learning.
 
 ```python
 # AdaptiveGradientScaler: tracks running mean/std, rescales to [-target_range, +target_range]
@@ -232,7 +232,7 @@ Reward range: `[-0.5, 1.0]` per step. Velocity penalty uses smooth `upright⁴` 
 ### Key Findings
 
 1. **QBound is the most beneficial single technique for SAC** -- improves single pendulum from 312→453
-2. **Adaptive Scaling destroys SAC but rescues TD3** -- incompatible with squashed Gaussian policy
+2. **Adaptive Gradient Scaling destroys SAC but rescues TD3** -- incompatible with squashed Gaussian policy
 3. **RWAI v2 helps SAC significantly** (482.9 peak on double) but destabilizes TD3
 4. **PER amplifies other techniques** -- PER+QBound and PER+AS are the best combos
 5. **No universal best technique** -- optimal configuration is algorithm-dependent

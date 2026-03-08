@@ -39,7 +39,7 @@
 \maketitle
 
 \begin{abstract}
-We investigate five complementary techniques for improving off-policy deep reinforcement learning on hard-exploration continuous control tasks: (1)~\textbf{Reward-Range-Aware Initialization~(RWAI)} of critic last-layer weights and biases to the expected Q-value range; (2)~\textbf{Gradient Clipping~(GC)} via \texttt{clip\_grad\_norm\_} after each backward pass; (3)~\textbf{Adaptive Scaling~(AS)} of pre-tanh actor activations using running statistics; (4)~\textbf{Prioritized Experience Replay~(PER)} with importance-sampling-weighted loss; and (5)~\textbf{Q-Value Bounding~(QBound)} via two-stage hard clipping on critic TD targets and soft clipping on actor Q-values. We evaluate across a full combinatorial ablation: 3~off-policy algorithms (SAC, TD3, DDPG)~$\times$~2~environments (single and double inverted pendulum swing-up)~$\times$~$2^4 = 16$ combinations of \{RWAI~v2, PER, AS, QBound\}, plus PPO baselines, legacy RWAI~v1 experiments, and \texttt{norm\_reward=False} baselines, totaling \textbf{110~experiments}. QBound emerges as the most consistently beneficial technique for SAC (single:~$312 \to 453$, double:~$434 \to 452$), while AS proves catastrophic for SAC (all variants collapse below~75) yet partially rescues TD3 from exploration failure (single:~$8.7 \to 205$). RWAI~v2 significantly improves SAC (double: 483 peak) but destabilizes TD3. The best configurations combine QBound with PER for SAC ($453.6/453.5$ single, $455.7/455.7$ double) and PER with AS for TD3 double ($441.4/428.8$). These results demonstrate that technique effectiveness is strongly algorithm-dependent.
+We investigate five complementary techniques for improving off-policy deep reinforcement learning on hard-exploration continuous control tasks: (1)~\textbf{Reward-Range-Aware Initialization~(RWAI)} of critic last-layer weights and biases to the expected Q-value range; (2)~\textbf{Gradient Clipping~(GC)} via \texttt{clip\_grad\_norm\_} after each backward pass; (3)~\textbf{Adaptive Gradient Scaling~(AS)} of pre-tanh actor activations using running statistics; (4)~\textbf{Prioritized Experience Replay~(PER)} with importance-sampling-weighted loss; and (5)~\textbf{Q-Value Bounding~(QBound)} via two-stage hard clipping on critic TD targets and soft clipping on actor Q-values. We evaluate across a full combinatorial ablation: 3~off-policy algorithms (SAC, TD3, DDPG)~$\times$~2~environments (single and double inverted pendulum swing-up)~$\times$~$2^4 = 16$ combinations of \{RWAI~v2, PER, AS, QBound\}, plus PPO baselines, legacy RWAI~v1 experiments, and \texttt{norm\_reward=False} baselines, totaling \textbf{110~experiments}. QBound emerges as the most consistently beneficial technique for SAC (single:~$312 \to 453$, double:~$434 \to 452$), while AS proves catastrophic for SAC (all variants collapse below~75) yet partially rescues TD3 from exploration failure (single:~$8.7 \to 205$). RWAI~v2 significantly improves SAC (double: 483 peak) but destabilizes TD3. The best configurations combine QBound with PER for SAC ($453.6/453.5$ single, $455.7/455.7$ double) and PER with AS for TD3 double ($441.4/428.8$). These results demonstrate that technique effectiveness is strongly algorithm-dependent.
 \end{abstract}
 
 \section{Introduction}
@@ -64,7 +64,7 @@ Beyond initialization, off-policy algorithms face additional challenges: gradien
 
 \textbf{Q-Value Bounding.}~Gebrekidan~\citep{gebrekidan2025qbound} introduced QBound, a method for constraining Q-value estimates to the theoretically achievable range using two-stage hard clipping on critic targets and soft (softplus) clipping on actor Q-values. We integrate QBound into our combinatorial ablation framework.
 
-\textbf{Adaptive Scaling.}~Gebrekidan~\citep{gebrekidan2025as} identified gradient asymmetry and activation saturation as failure modes in deterministic actor networks and proposed an adaptive scaling module to maintain pre-tanh activations in the high-gradient region. We evaluate this technique across SAC, TD3, and DDPG.
+\textbf{Adaptive Gradient Scaling.}~Gebrekidan~\citep{gebrekidan2025as} identified gradient asymmetry and activation saturation as failure modes in deterministic actor networks and proposed an adaptive gradient scaling module to maintain pre-tanh activations in the high-gradient region. We evaluate this technique across SAC, TD3, and DDPG.
 
 \textbf{Exploration noise.}~Hollenstein et al.~\citep{hollenstein2022noise} showed OU noise outperforms Gaussian for swing-up tasks. Eberhard et al.~\citep{eberhard2023pink} confirmed temporally correlated noise advantages. We adopt OU noise for TD3 and DDPG.
 
@@ -115,7 +115,7 @@ Double pendulum & 1000 & $-50.00$ & $100.00$ & $25.00$ \\
 
 SB3~2.7.1's SAC, TD3, and DDPG do not natively support \texttt{max\_grad\_norm}. We subclass each algorithm and insert \texttt{clip\_grad\_norm\_()} after each \texttt{backward()} call, clipping both critic and actor gradients to a maximum $L_2$ norm of~1.0. All off-policy experiments use GC as standard.
 
-\subsection{Adaptive Scaling (AS)~\citep{gebrekidan2025as}}
+\subsection{Adaptive Gradient Scaling (AS)~\citep{gebrekidan2025as}}
 
 An \textbf{AdaptiveGradientScaler} module is placed before the tanh nonlinearity. It tracks running mean $\mu$ and standard deviation $\sigma$ of pre-tanh activations using EMA (decay 0.99), then linearly maps $[\mu - k\sigma, \mu + k\sigma]$ to $[-t, +t]$, where $k=2.5$ and target range $t=2.0$:
 \begin{equation}
@@ -287,7 +287,7 @@ RWAI v2 + PER + AS & 24.3 & $-0.3$ & 413.5 & 412.8 \\
 \begin{figure}[H]
 \centering
 \includegraphics[width=\textwidth]{gcas_comparison.png}
-\caption{Adaptive Scaling (AS) comparison: baseline (blue) vs AS (green) vs RWAI+AS (orange) vs PER+AS (red). AS partially rescues TD3 single from exploration failure but is catastrophic for SAC. PER+AS (red) achieves the best TD3 single-pendulum performance.}
+\caption{Adaptive Gradient Scaling (AS) comparison: baseline (blue) vs AS (green) vs RWAI+AS (orange) vs PER+AS (red). AS partially rescues TD3 single from exploration failure but is catastrophic for SAC. PER+AS (red) achieves the best TD3 single-pendulum performance.}
 \label{fig:gcas}
 \end{figure}
 
@@ -459,7 +459,7 @@ We present a comprehensive 110-experiment ablation study of five complementary t
 \begin{enumerate}
 \item \textbf{QBound is the most beneficial single technique for SAC}, improving single pendulum from $312 \to 453$ ($+45\%$). PER + QBound achieves the most stable high performance.
 
-\item \textbf{Adaptive Scaling is catastrophic for SAC but rescues TD3}---the same technique that corrupts SAC's log-probability computation enables TD3 to partially escape exploration failure ($8.7 \to 205$).
+\item \textbf{Adaptive Gradient Scaling is catastrophic for SAC but rescues TD3}---the same technique that corrupts SAC's log-probability computation enables TD3 to partially escape exploration failure ($8.7 \to 205$).
 
 \item \textbf{RWAI v2 significantly improves SAC} (482.9 peak on double) \textbf{but destabilizes TD3}, confirming that informed initialization interacts destructively with conservative Q-estimation.
 

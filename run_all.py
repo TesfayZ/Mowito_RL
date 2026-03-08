@@ -12,7 +12,7 @@ Organizes and runs all experiments in logical groups:
 
 All off-policy experiments include gradient clipping (GC) as standard.
 The four contributions ablated combinatorially are:
-  RWAI v2, PER, AS (Adaptive Scaling), QBound.
+  RWAI v2, PER, AS (Adaptive Gradient Scaling), QBound.
 
 Usage:
     python run_all.py                        # Run all experiments
@@ -119,7 +119,7 @@ All off-policy experiments include gradient clipping (max_grad_norm=1.0).
 Contributions ablated combinatorially:
   RWAI v2    — Reward-range-aware critic initialization (scaled weights)
   PER        — Prioritized Experience Replay
-  AS         — Adaptive Scaling (prevents tanh saturation)
+  AS         — Adaptive Gradient Scaling (prevents tanh saturation)
   QBound     — Q-value bounding to theoretical range
         """,
     )

@@ -352,7 +352,7 @@ def plot_gcas_comparison(results_dir="results"):
                 ax.text(0.5, 0.5, "No data", transform=ax.transAxes,
                         ha="center", va="center", fontsize=14, color="gray")
 
-    fig.suptitle("GCAS Comparison: Baseline vs Grad Clip + Adaptive Scaling",
+    fig.suptitle("GCAS Comparison: Baseline vs Grad Clip + Adaptive Gradient Scaling",
                  fontsize=16, fontweight="bold", y=0.98)
     fig.tight_layout(rect=[0, 0, 1, 0.96])
     path = os.path.join(results_dir, "gcas_comparison.png")

@@ -489,7 +489,7 @@ DDPG_DOUBLE_RWINIT_V2 = dict(
     verbose=1,
 )
 
-# ── Adaptive Scaling Configurations (for GCAS experiments) ───────────────────
+# ── Adaptive Gradient Scaling Configurations (for GCAS experiments) ───────────────────
 # Same hyperparameters as baseline but with adaptive gradient scaling actors.
 # Used with gradient-clipped algorithm classes from gc_algorithms.py.
 
@@ -605,7 +605,7 @@ DDPG_DOUBLE_AS = dict(
     verbose=1,
 )
 
-# ── RWAI v2 + Adaptive Scaling Configurations ───────────────────────────────
+# ── RWAI v2 + Adaptive Gradient Scaling Configurations ───────────────────────────────
 
 SAC_SINGLE_RWINIT_V2_AS = dict(
     policy=AdaptiveScalingRWAISACPolicy,
@@ -750,7 +750,7 @@ PER_BETA_FINAL = 1.0   # Final IS weight exponent (annealed linearly)
 # The four contributions ablated combinatorially are:
 #   RWAI v2   — Reward-range-aware critic init (scaled weights)
 #   PER       — Prioritized Experience Replay
-#   AS        — Adaptive Scaling (prevents tanh saturation)
+#   AS        — Adaptive Gradient Scaling (prevents tanh saturation)
 #   QBound    — Q-value bounding to theoretical range
 #
 # This gives 2^4 = 16 variants × 3 algos × 2 envs = 96 off-policy experiments,
