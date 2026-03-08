@@ -334,7 +334,7 @@ Double & DDPG + AS & 457.9 & 457.1 \\
 \label{tab:best}
 \end{table}
 
-PPO baselines: $450.2/439.0$ (single), $488.0/458.7$ (double).
+PPO baselines: $450.2/439.0$ (single), $488.0/458.7$ (double). PPO establishes the on-policy performance ceiling against which off-policy improvements are evaluated in Section~\ref{sec:ppo_benchmark}.
 
 \begin{figure}[H]
 \centering
@@ -393,6 +393,41 @@ TD3's complete failure on single pendulum (8.7 across most variants) is confirme
 \item AS partially rescues (205.4)---tanh desaturation enables exploration
 \item QBound, PER, RWAI v2 alone do not help
 \end{itemize}
+
+\subsection{Competitiveness with PPO}
+\label{sec:ppo_benchmark}
+
+PPO serves as the on-policy performance ceiling: $450.2/439.0$ best/final (single), $488.0/458.7$ (double). A central question is whether the investigated techniques make off-policy algorithms competitive with PPO.
+
+\begin{table}[h]
+\centering
+\caption{Off-policy vs PPO benchmark. ``Gap'' is the difference in final reward relative to PPO. Positive values indicate the off-policy configuration \emph{exceeds} PPO.}
+\small
+\begin{tabular}{llccr}
+\toprule
+Algorithm & Configuration & Best & Final & Gap vs PPO \\
+\midrule
+\multicolumn{5}{l}{\emph{Single pendulum (PPO final: 439.0)}} \\
+SAC & baseline (GC only) & 312.4 & 312.4 & $-126.6$ \\
+SAC & + QBound & 453.2 & 452.2 & $\mathbf{+13.2}$ \\
+SAC & + PER + QBound & 453.6 & 453.5 & $\mathbf{+14.5}$ \\
+TD3 & baseline (GC only) & 8.7 & 8.7 & $-430.3$ \\
+TD3 & + PER + AS & 292.5 & 269.5 & $-169.5$ \\
+DDPG & baseline (GC only) & 298.8 & 298.8 & $-140.2$ \\
+DDPG & + RWAI v2 + PER & 455.4 & 206.2 & $-232.8$ \\
+\midrule
+\multicolumn{5}{l}{\emph{Double pendulum (PPO final: 458.7)}} \\
+SAC & baseline (GC only) & 434.5 & 369.9 & $-88.8$ \\
+SAC & + PER + QBound & 455.7 & 455.7 & $-3.0$ \\
+SAC & + RWAI v2 & 482.9 & 453.7 & $-5.0$ \\
+TD3 & + PER + AS & 441.4 & 428.8 & $-29.9$ \\
+DDPG & + AS & 457.9 & 457.1 & $-1.6$ \\
+\bottomrule
+\end{tabular}
+\label{tab:ppo_gap}
+\end{table}
+
+\textbf{Key findings:} On single pendulum, SAC baselines underperform PPO by 127 points, but QBound closes this gap entirely---SAC + QBound and SAC + PER + QBound \emph{exceed} PPO by $+13$--$15$ points. TD3 remains far below PPO even with its best configuration (PER + AS: $-170$). On double pendulum, multiple off-policy configurations approach PPO-level performance: DDPG + AS ($-1.6$), SAC + PER + QBound ($-3.0$), and SAC + RWAI v2 ($-5.0$). Without the investigated techniques, off-policy algorithms are consistently inferior to PPO on these hard-exploration tasks; \emph{with} the right technique combination, SAC matches or exceeds PPO while retaining off-policy sample efficiency advantages.
 
 \subsection{The Overestimation Spectrum}
 
