@@ -1,8 +1,8 @@
 # Combinatorial Ablation of Training Stabilization Techniques for Off-Policy Deep RL
 
-A comprehensive **110-experiment** study evaluating how five complementary techniques — critic initialization, gradient clipping, adaptive gradient scaling, Q-value bounding, and prioritized experience replay — affect off-policy algorithm performance on hard-exploration continuous control tasks.
+A comprehensive **116-experiment** study evaluating how five complementary techniques — critic initialization, gradient clipping, adaptive gradient scaling, Q-value bounding, and prioritized experience replay — affect off-policy algorithm performance on hard-exploration continuous control tasks.
 
-We train SAC, TD3, and DDPG agents (plus PPO baselines) to **swing up and balance** inverted pendulums, testing all **2^4 = 16 combinations** of four techniques per algorithm-environment pair. The full combinatorial ablation reveals that technique effectiveness is **strongly algorithm-dependent**: QBound improves SAC by +45% but has no effect on TD3; Adaptive Gradient Scaling rescues TD3 from exploration failure but destroys SAC.
+We train SAC, TD3, and DDPG agents (plus PPO baselines) to **swing up and balance** inverted pendulums, testing all **2^4 = 16 combinations** of four techniques per algorithm-environment pair. The full combinatorial ablation reveals that technique effectiveness is **strongly algorithm-dependent**: QBound provides the most stable SAC convergence (most of SAC's single-pendulum raw gain comes from disabling reward normalization, which QBound requires); Adaptive Gradient Scaling partially rescues TD3 from exploration failure but destroys SAC without QBound (QBound partially rescues AS-damaged SAC).
 
 ## Techniques
 
@@ -37,7 +37,7 @@ Both environments use custom **Lagrangian mechanics** (no external physics engin
 ├── per_algorithms.py                  # PER algorithm subclasses (legacy)
 ├── per_buffer.py                      # Prioritized Experience Replay buffer (sum-tree)
 ├── utils.py                           # Shared utilities (scaler buffer sync)
-├── configs.py                         # All 110 experiment configurations
+├── configs.py                         # All 116 experiment configurations
 ├── train.py                           # Training entry point
 ├── test.py                            # Evaluation + video recording
 ├── plot_results.py                    # Training curve visualization
@@ -71,7 +71,7 @@ python train.py -e sac_single_rwinit_v2_per_as_qbound  # SAC with all 4 techniqu
 # Same patterns for td3_ and ddpg_ prefixes
 # Same for double pendulum: replace _single with _double
 
-# Train all 110 experiments (skips existing final_model.zip)
+# Train all 116 experiments (skips existing final_model.zip)
 python train.py --all
 
 # Or use the batch runner with grouping and progress tracking
@@ -139,7 +139,7 @@ All variants include gradient clipping (`max_grad_norm=1.0`) as standard.
 | `_per_as_qbound` | | ✓ | ✓ | ✓ |
 | `_rwinit_v2_per_as_qbound` | ✓ | ✓ | ✓ | ✓ |
 
-**Total**: 3 algos × 2 envs × 16 variants + 2 PPO + 6 legacy RWAI v1 + 6 `norm_reward=False` baselines = **110 experiments**
+**Total**: 3 algos × 2 envs × 16 variants + 2 PPO + 6 legacy RWAI v1 + 6 vanilla baselines (for v1 comparison) + 6 `norm_reward=False` baselines = **116 experiments**
 
 Experiments using RWAI v2 or QBound set `norm_reward=False` to align raw Q-values with known bounds. Dedicated `_no_norm_reward` baselines (6 experiments) enable fair comparison by isolating the effect of disabling reward normalization. Legacy RWAI v1 experiments (`_rwinit` suffix) are retained for diagnostic reference.
 
@@ -205,7 +205,7 @@ reward = uprightness - cart_penalty - control_penalty - velocity_penalty
 
 Reward range: `[-0.5, 1.0]` per step. Velocity penalty uses smooth `upright⁴` activation to avoid reward discontinuity near the upright position.
 
-## Key Results (110 Experiments Completed)
+## Key Results (116 Experiments Completed)
 
 ### Best Configurations per Algorithm
 
@@ -214,9 +214,9 @@ Reward range: `[-0.5, 1.0]` per step. Velocity penalty uses smooth `upright⁴` 
 | **SAC** | Single | PER + QBound | 453.6 / 453.5 |
 | **SAC** | Double | RWAI v2 | 482.9 / 453.7 |
 | **TD3** | Single | PER + AS | 292.5 / 269.5 |
-| **TD3** | Double | PER + QBound | 457.1 / 405.8 |
-| **DDPG** | Single | RWAI v2 + PER | 455.4 / 206.2 |
-| **DDPG** | Double | baseline | 478.6 / 411.2 |
+| **TD3** | Double | PER + AS | 441.4 / 428.8 |
+| **DDPG** | Single | baseline (GC) | 298.8 / 298.8 |
+| **DDPG** | Double | AS | 457.9 / 457.1 |
 | **PPO** | Single | baseline | 450.2 / 439.0 |
 | **PPO** | Double | baseline | 488.0 / 458.7 |
 
@@ -225,16 +225,16 @@ Reward range: `[-0.5, 1.0]` per step. Velocity penalty uses smooth `upright⁴` 
 | Technique | SAC | TD3 | DDPG |
 |-----------|:---:|:---:|:----:|
 | **RWAI v2** | Strong positive | Destructive | High peak, unstable |
-| **PER** | Moderate alone, great with QBound | Neutral alone, great with AS | Mixed |
-| **AS** | **Catastrophic** (destroys SAC) | **Rescues** exploration | Mixed |
-| **QBound** | **Excellent** (+45% single) | Neutral | Neutral |
+| **PER** | Moderate alone, strong with QBound/AS/RWAI v2 | Neutral alone, strong with AS | Mixed |
+| **AS** | **Catastrophic** without QBound; QBound partially rescues | **Partially rescues** exploration | Mixed |
+| **QBound** | **Excellent** stability (gain mostly from disabling norm_reward) | Neutral single, positive double (gain partly from disabling norm_reward) | Neutral |
 
 ### Key Findings
 
-1. **QBound is the most beneficial single technique for SAC** -- improves single pendulum from 312→453
-2. **Adaptive Gradient Scaling destroys SAC but rescues TD3** -- incompatible with squashed Gaussian policy
-3. **RWAI v2 helps SAC significantly** (482.9 peak on double) but destabilizes TD3
-4. **PER amplifies other techniques** -- PER+QBound and PER+AS are the best combos
+1. **QBound provides the most stable SAC convergence** -- PER+QBound achieves 453.5/455.7 final (single/double). Note: the headline gain (312→453) is primarily from disabling reward normalization (required by QBound); against the fair `no_norm_reward` baseline, QBound adds stability (+3.9 final on single, +0.0 on double alone, +47.0 with PER)
+2. **Adaptive Gradient Scaling destroys SAC without QBound but partially rescues TD3** (8.7→205) -- AS+QBound partially rescues SAC (225/421 single/double vs pure AS: 8/3)
+3. **RWAI v2 helps SAC on double pendulum** (482.9 peak) but matches `no_norm_reward` baseline on single; destabilizes TD3
+4. **PER amplifies other techniques** -- PER+QBound, PER+AS, and PER+RWAI v2 are the best combos
 5. **No universal best technique** -- optimal configuration is algorithm-dependent
 
 ### Generated Plots
@@ -248,7 +248,7 @@ Reward range: `[-0.5, 1.0]` per step. Velocity penalty uses smooth `upright⁴` 
 
 ## Full Paper
 
-See [report/report.md](report/report.md) for the complete analysis including related work, method details, and all 110-experiment results.
+See [report/report.md](report/report.md) for the complete analysis including related work, method details, and all 116-experiment results.
 Also available as LaTeX: [report/paper.tex](report/paper.tex).
 
 ## Citation

@@ -19,7 +19,7 @@ import numpy as np
 import torch
 import gymnasium as gym
 
-from stable_baselines3 import PPO
+from stable_baselines3 import PPO, SAC, TD3
 from stable_baselines3.common.vec_env import DummyVecEnv, SubprocVecEnv, VecNormalize
 from stable_baselines3.common.callbacks import (
     EvalCallback,
@@ -144,7 +144,11 @@ def train_experiment(name, exp_config, results_dir="results"):
     algo_config = copy.deepcopy(exp_config["config"])
     algo_map = {
         "PPO": PPO,
-        # All off-policy experiments use GC (gradient clipping).
+        # Vanilla SB3 classes (no GC) — used for legacy RWAI v1 experiments
+        "SAC": SAC,
+        "TD3": TD3,
+        "DDPG": TD3,  # DDPG is TD3 with n_critics=1, policy_delay=1
+        # All main off-policy experiments use GC (gradient clipping).
         # 4 class types: GC, PER+GC, GC+QB, PER+GC+QB.
         "SAC_GC": SACWithGC,
         "TD3_GC": TD3WithGC,

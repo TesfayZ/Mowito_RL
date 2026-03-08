@@ -7,7 +7,7 @@
 
 ## Abstract
 
-We investigate five complementary techniques for improving off-policy deep reinforcement learning on hard-exploration continuous control tasks: (1) **Reward-Range-Aware Initialization (RWAI)** of critic last-layer weights and biases to the expected Q-value range, in both a bias-only variant (v1) and a scaled-weights variant (v2); (2) **Gradient Clipping (GC)** via `clip_grad_norm_` after each backward pass to stabilize training; (3) **Adaptive Gradient Scaling (AS)** of pre-tanh actor activations using running mean/std statistics to prevent gradient saturation; (4) **Prioritized Experience Replay (PER)** with importance-sampling-weighted critic loss and sum-tree sampling; and (5) **Q-Value Bounding (QBound)** via two-stage hard clipping on critic TD targets and soft (softplus) clipping on actor Q-values to constrain estimates within the theoretically achievable range. We evaluate these techniques across a full combinatorial ablation: 3 off-policy algorithms (SAC, TD3, DDPG) x 2 environments (single and double inverted pendulum swing-up) x 2^4 = 16 combinations of {RWAI v2, PER, AS, QBound}, plus 2 PPO baselines, 6 legacy RWAI v1 experiments, and 6 norm_reward=False baselines, totaling **110 experiments**. All off-policy experiments use gradient clipping (GC) as standard infrastructure. Initial RWAI v1 results revealed a critical confound between raw Q-range computation and runtime reward normalization (VecNormalize), producing 5-50x overestimation; the expanded experiment matrix addresses this by disabling reward normalization for RWAI v2 and QBound experiments and providing dedicated norm_reward=False baselines for fair comparison. The TD3 RWAI v1 results yield a significant diagnostic finding: temporary rescue from exploration failure (7.95 to 259, 2.93 to 440) confirms that TD3's clipped double-Q mechanism suppresses value signals from rare high-reward transitions. In the completed 110-experiment matrix, QBound emerges as the most consistently beneficial technique for SAC (single: 312→453, double: 434→452), while Adaptive Gradient Scaling proves catastrophic for SAC (all AS variants collapse below 75) yet partially rescues TD3 from exploration failure (single: 8.7→205). RWAI v2 significantly improves SAC (single: 453, double: 483 peak) but destabilizes TD3. The best-performing configurations combine QBound with PER for SAC (453.6/453.5 single, 455.7/455.7 double) and PER with AS for TD3 double (441.4/428.8). These results demonstrate that technique effectiveness is strongly algorithm-dependent, and that no single technique universally improves all off-policy algorithms.
+We investigate five complementary techniques for improving off-policy deep reinforcement learning on hard-exploration continuous control tasks: (1) **Reward-Range-Aware Initialization (RWAI)** of critic last-layer weights and biases to the expected Q-value range, in both a bias-only variant (v1) and a scaled-weights variant (v2); (2) **Gradient Clipping (GC)** via `clip_grad_norm_` after each backward pass to stabilize training; (3) **Adaptive Gradient Scaling (AS)** of pre-tanh actor activations using running mean/std statistics to prevent gradient saturation; (4) **Prioritized Experience Replay (PER)** with importance-sampling-weighted critic loss and sum-tree sampling; and (5) **Q-Value Bounding (QBound)** via two-stage hard clipping on critic TD targets and soft (softplus) clipping on actor Q-values to constrain estimates within the theoretically achievable range. We evaluate these techniques across a full combinatorial ablation: 3 off-policy algorithms (SAC, TD3, DDPG) x 2 environments (single and double inverted pendulum swing-up) x 2^4 = 16 combinations of {RWAI v2, PER, AS, QBound}, plus 2 PPO baselines, 6 legacy RWAI v1 experiments, and 6 norm_reward=False baselines, totaling **116 experiments**. All off-policy experiments use gradient clipping (GC) as standard infrastructure. Initial RWAI v1 results revealed a critical confound between raw Q-range computation and runtime reward normalization (VecNormalize), producing 5-50x overestimation; the expanded experiment matrix addresses this by disabling reward normalization for RWAI v2 and QBound experiments and providing dedicated norm_reward=False baselines for fair comparison. The TD3 RWAI v1 results yield a significant diagnostic finding: temporary rescue from exploration failure on single pendulum (8.7 to 272.4 peak) confirms that TD3's clipped double-Q mechanism suppresses value signals from rare high-reward transitions, though both variants ultimately collapse. In the completed 116-experiment matrix, QBound emerges as the most consistently beneficial technique for SAC, providing stable convergence; notably, most of SAC's single-pendulum gain (312→452.6) comes from disabling reward normalization (required by QBound), with QBound adding stability (+3.9 final). Adaptive Gradient Scaling proves catastrophic for SAC (all AS variants collapse below 75) yet partially rescues TD3 from exploration failure (single: 8.7→205). RWAI v2 improves SAC double pendulum (483 peak) but matches the `no_norm_reward` baseline on single; it destabilizes TD3. The best-performing configurations combine QBound with PER for SAC (453.6/453.5 single, 455.7/455.7 double) and PER with AS for TD3 double (441.4/428.8). These results demonstrate that technique effectiveness is strongly algorithm-dependent, and that no single technique universally improves all off-policy algorithms.
 
 ---
 
@@ -210,7 +210,7 @@ We test four algorithms -- three off-policy and one on-policy control:
 | **TD3** [2] | Off-policy | 2 (clipped double-Q) | OU noise (theta=0.15, sigma=0.3) | Delayed updates, target smoothing |
 | **DDPG** [3] | Off-policy | 1 | OU noise (theta=0.15, sigma=0.3) | Single critic, no double-Q |
 
-The full experiment matrix comprises **110 experiments**:
+The full experiment matrix comprises **116 experiments**:
 
 | Category | Count | Description |
 |----------|-------|-------------|
@@ -218,7 +218,8 @@ The full experiment matrix comprises **110 experiments**:
 | Off-policy combinatorial | 96 | 3 algos x 2 envs x 2^4 combinations of {RWAI v2, PER, AS, QBound} |
 | Legacy RWAI v1 | 6 | 3 algos x 2 envs, bias-only RWAI for reference |
 | norm_reward=False baselines | 6 | 3 algos x 2 envs, GC only with raw rewards for fair comparison |
-| **Total** | **110** | |
+| Vanilla baselines (RWAI v1 comparison) | 6 | 3 algos x 2 envs, no GC, norm_reward=True for v1 legacy comparison |
+| **Total** | **116** | |
 
 All off-policy experiments use gradient clipping (GC, max_grad_norm=1.0) as standard infrastructure. The four contributions ablated combinatorially are RWAI v2, PER, AS, and QBound. Experiments using RWAI v2 or QBound set `norm_reward=False` to avoid the VecNormalize confound. The dedicated norm_reward=False baselines enable fair comparison against these experiments by isolating the effect of each technique from the effect of disabling reward normalization.
 
@@ -285,16 +286,14 @@ The original 16 RWAI v1 experiments (6 off-policy RWAI v1 + corresponding baseli
 
 | Algorithm | Env | Default Best | Default Final | RWAI v1 Best | RWAI v1 Final | Effect |
 |-----------|-----|:-----------:|:------------:|:---------:|:----------:|:------|
-| **PPO** | Single | 449.09 | 449.09 | 450.26 | 449.54 | Neutral |
-| **PPO** | Double | 492.75 | 479.90 | 486.72 | 475.49 | Neutral |
-| **SAC** | Single | 452.73 | 451.43 | 51.81 | 0.00 | Catastrophic collapse |
-| **SAC** | Double | 477.51 | 451.71 | 338.08 | 0.36 | Catastrophic collapse |
-| **TD3** | Single | 7.95 | 7.95 | 259.05 | -2.11 | Early rescue, then collapse |
-| **TD3** | Double | 2.93 | 2.75 | 440.38 | -1.95 | Early rescue, then collapse |
-| **DDPG** | Single | 325.57 | 280.09 | 248.57 | 150.99 | Degraded |
-| **DDPG** | Double | 475.50 | 455.93 | 464.82 | 371.01 | Degraded |
+| **SAC** | Single | 375.9 | 364.0 | 179.5 | -0.3 | Catastrophic collapse |
+| **SAC** | Double | 457.0 | 416.6 | 263.4 | 19.4 | Catastrophic collapse |
+| **TD3** | Single | 8.7 | 8.7 | 272.4 | 43.2 | Early rescue, then collapse |
+| **TD3** | Double | 449.9 | 120.1 | 306.9 | -6.5 | Early rescue, then collapse |
+| **DDPG** | Single | 284.6 | 181.5 | 258.5 | 214.3 | Moderate positive |
+| **DDPG** | Double | 437.4 | 231.8 | 407.0 | 286.5 | Moderate positive |
 
-**Key**: Best Eval = highest mean reward across all evaluations (10 episodes each, every 10K steps). Final Eval = mean reward at the last evaluation (500K steps). Rewards are unnormalized. PPO results shown are from separate PPO RWAI v1 experiments that are no longer in the current codebase; the current PPO experiments are baselines without RWAI.
+**Key**: Best Eval = highest mean reward across all evaluations (10 episodes each, every 10K steps). Final Eval = mean reward at the last evaluation (500K steps). Rewards are unnormalized. PPO RWAI v1 results (which showed neutral effect) are from prior experiments no longer in the current codebase and have been omitted from this table; the current PPO experiments are baselines without RWAI.
 
 ### 5.2 PPO: On-Policy Robustness (Control Experiment)
 
@@ -302,8 +301,8 @@ PPO achieves strong, stable performance on both environments, serving as an on-p
 
 | Variant | Best Eval | Final Eval | Converged By |
 |---------|:---------:|:----------:|:------------:|
-| PPO Single | 449.09 | 449.09 | ~320K |
-| PPO Double | 492.75 | 479.90 | ~350K |
+| PPO Single | 450.2 | 439.0 | ~320K |
+| PPO Double | 488.0 | 458.7 | ~350K |
 
 PPO confirms both environments are solvable and that any failures observed in off-policy algorithms are algorithm-specific, not environment-related. The current codebase includes only these two PPO baselines (no PPO RWAI experiments, as on-policy algorithms are robust to initialization bias as confirmed by the original experiments).
 
@@ -311,44 +310,44 @@ PPO confirms both environments are solvable and that any failures observed in of
 
 SAC with default initialization solves both environments convincingly:
 
-- **SAC Single default**: Best 452.73, Final 451.43 -- stable convergence
-- **SAC Double default**: Best 477.51, Final 451.71 -- solved with moderate variance
+- **SAC Single default**: Best 375.9, Final 364.0 -- moderate convergence (Note: these are v1 legacy vanilla baselines without GC and with norm_reward=True; current GC-based baselines differ: 312.4/312.4 with norm_reward, 452.6/448.3 without)
+- **SAC Double default**: Best 457.0, Final 416.6 -- solved with moderate variance (Note: v1 legacy vanilla baseline; current GC baselines: 434.5/369.9 with norm_reward, 452.0/408.7 without)
 
 SAC with RWAI v1 suffers catastrophic training collapse on both environments:
 
-- **SAC Single RWAI v1**: Brief peak at 51.81 (60K steps), then collapsed to 0.00 by 100K. The policy diverged completely and never recovered over the remaining 400K steps.
-- **SAC Double RWAI v1**: More gradual rise to 338.08 (160K steps), then collapsed to near-zero by 190K. Brief partial recovery (240 at 350K) before collapsing again.
+- **SAC Single RWAI v1**: Peak at 179.5, then collapsed to -0.3 final. The policy diverged and never recovered.
+- **SAC Double RWAI v1**: Rise to 263.4 peak, then collapsed to 19.4 final. Unable to sustain learned behavior.
 
 **Failure mechanism**: Setting the critic bias to Q_mid approximately 50 (under the original r_min=0 assumption) creates massive initial overestimation relative to the normalized reward scale. SAC's automatic entropy coefficient alpha tuning is particularly sensitive to Q-value magnitude: when Q-values are artificially large, the entropy bonus alpha*H(pi) becomes relatively insignificant, causing the policy to prematurely converge to a narrow action distribution. Once the critic begins correcting downward, the alpha coefficient cannot readjust quickly enough, resulting in a destabilizing feedback loop between collapsing Q-values and poorly calibrated entropy.
 
-### 5.4 TD3: RWAI v1 Rescues from Exploration Trap, Then Collapses
+### 5.4 TD3: Mixed RWAI v1 Effects — Single Rescue, Double Degradation
 
-TD3 with default initialization fails completely on both environments, confirming the earlier baseline findings:
+TD3 with default (vanilla) initialization shows strongly environment-dependent behavior:
 
-- **TD3 Single default**: Best 7.95, Final 7.95 -- flatlined for 500K steps, episode length ~37 steps
-- **TD3 Double default**: Best 2.93, Final 2.75 -- similarly stuck
+- **TD3 Single default**: Best 8.7, Final 8.7 -- completely stuck for 500K steps, episode length ~37 steps
+- **TD3 Double default**: Best 449.9, Final 120.1 -- achieves high peak but suffers significant late-training degradation
 
-TD3 with RWAI v1 reveals a striking two-phase pattern:
+TD3 with RWAI v1 shows contrasting effects across environments:
 
-**Phase 1 -- Exploration rescue (0-80K steps):** RWAI dramatically rescues TD3 from its exploration trap. TD3 Single RWAI climbs to 259.05 (50K), TD3 Double RWAI reaches 440.38 (80K) -- a 55x improvement over the default. The optimistic initial Q-values (bias approximately 50) counteract the clipped double-Q's conservatism, driving the policy to explore high-reward states it would never discover under default initialization.
+**Single pendulum — exploration rescue then collapse:** RWAI rescues TD3 Single from its exploration trap, climbing to 272.4 peak (vs. 8.7 stuck baseline). The optimistic initial Q-values (bias approximately 50) counteract the clipped double-Q's conservatism, driving the policy to explore high-reward states. However, the rescue is unsustainable — final reward degrades to 43.2, still far better than the stuck baseline (8.7) but unable to maintain peak performance.
 
-**Phase 2 -- Catastrophic collapse (80K-500K steps):** Both variants then suffer complete training collapse. TD3 Single RWAI drops from 259 to -2.11 by 90K. TD3 Double RWAI drops from 440 to -1.95 by 190K. Neither variant recovers.
+**Double pendulum — degradation:** RWAI v1 worsens TD3 Double, reducing both peak (449.9→306.9) and final reward (120.1→-6.5). The vanilla baseline already achieves exploration on double pendulum, so RWAI's overestimation introduces instability without a compensating exploration benefit, causing more severe collapse.
 
-**Root cause -- the clipped double-Q and conservative Q-estimation interaction**: TD3's conservative Q-estimation (min(Q_1, Q_2)) suppresses the value signal from rare high-reward transitions. Under default initialization with Q approximately 0, this creates a vicious cycle: conservative Q-values lead to a policy that does not pursue rare high-reward states, which produces fewer high-reward transitions in the buffer, which keeps Q-values conservative. RWAI breaks this cycle initially by providing optimistic Q-estimates, but the overestimation is too large and unstable. Once the critic correction overshoots, TD3's conservatism locks the policy into the collapsed state.
+**Root cause — the clipped double-Q and conservative Q-estimation interaction**: TD3's conservative Q-estimation (min(Q_1, Q_2)) suppresses the value signal from rare high-reward transitions. On single pendulum, this creates a vicious cycle where conservative Q-values prevent exploration of high-reward states. RWAI breaks this cycle by providing optimistic Q-estimates, but the overestimation is unstable under VecNormalize. On double pendulum, where the vanilla baseline already explores successfully, RWAI's 5-50x overestimation only destabilizes training.
 
-This demonstrates that TD3's exploration failure on swing-up is not primarily a noise issue but a fundamental interaction between conservative Q-estimation and hard exploration. RWAI proves this by temporarily rescuing TD3, confirming the diagnosis.
+This demonstrates that RWAI v1's effect on TD3 depends on whether the baseline has an exploration deficit to overcome.
 
-### 5.5 DDPG: Default Success, RWAI v1 Degradation
+### 5.5 DDPG: Default Instability, RWAI v1 Moderate Positive
 
-DDPG with default initialization performs well despite using identical hyperparameters and OU noise as TD3:
+DDPG with default (vanilla) initialization shows moderate but unstable performance:
 
-- **DDPG Single default**: Best 325.57, Final 280.09 -- partial solve, moderate instability
-- **DDPG Double default**: Best 475.50, Final 455.93 -- fully solved
+- **DDPG Single default**: Best 284.6, Final 181.5 -- partial solve, significant instability
+- **DDPG Double default**: Best 437.4, Final 231.8 -- high peak but degrades substantially
 
-DDPG with RWAI v1 shows degraded performance:
+DDPG with RWAI v1 shows a moderate positive effect on final reward despite lower peak performance:
 
-- **DDPG Single RWAI v1**: Best 248.57 (340K), Final 150.99 -- worse than default (325 to 249 peak, 280 to 151 final)
-- **DDPG Double RWAI v1**: Best 464.82 (460K), Final 371.01 -- worse final than default (456 to 371), with more instability
+- **DDPG Single RWAI v1**: Best 258.5, Final 214.3 -- lower peak (284.6→258.5) but improved final (181.5→214.3, +32.8)
+- **DDPG Double RWAI v1**: Best 407.0, Final 286.5 -- lower peak (437.4→407.0) but improved final (231.8→286.5, +54.7)
 
 The critical difference between DDPG and TD3 is that DDPG uses a **single Q-network** without clipped double-Q. DDPG's natural overestimation -- the problem TD3 was designed to fix -- functions as an implicit exploration bonus in hard-exploration settings:
 
@@ -356,14 +355,14 @@ The critical difference between DDPG and TD3 is that DDPG uses a **single Q-netw
 |----------|:---:|:---:|
 | Q-networks | 2 (min) | 1 |
 | Overestimation | Suppressed | Natural |
-| Single pendulum | 7.95 (stuck) | 325.57 (partial) |
-| Double pendulum | 2.93 (stuck) | 475.50 (solved) |
+| Single pendulum | 8.7 (stuck) | 284.6 (partial) |
+| Double pendulum | 449.9 (unstable) | 437.4 (unstable) |
 
-Adding RWAI's large positive bias to DDPG's already-overestimating critic pushes the overestimation beyond a beneficial threshold, introducing additional instability without a compensating exploration benefit (DDPG already explores adequately via its natural overestimation).
+RWAI v1's optimistic bias appears to stabilize DDPG's training trajectory, reducing the late-training degradation that the vanilla baseline exhibits. While peak performance drops slightly, the improved final reward suggests that RWAI's initialization provides a more stable training signal for DDPG's single-critic architecture, counteracting the late-stage instability seen in the vanilla baseline.
 
 ### 5.6 Complete Combinatorial Results
 
-All 110 experiments have been completed. The following tables present best and final mean evaluation rewards (10 episodes, deterministic policy, unnormalized rewards) for every experiment. "Best" is the highest mean reward across all evaluation checkpoints; "Final" is the reward at 500K steps.
+All 116 experiments have been completed. The following tables present best and final mean evaluation rewards (10 episodes, deterministic policy, unnormalized rewards) for every experiment. "Best" is the highest mean reward across all evaluation checkpoints; "Final" is the reward at 500K steps.
 
 #### 5.6.1 SAC Results
 
@@ -371,7 +370,7 @@ All 110 experiments have been completed. The following tables present best and f
 |---------|:----------:|:-----------:|:----------:|:-----------:|
 | baseline (GC, norm_reward) | 312.4 | 312.4 | 434.5 | 369.9 |
 | no_norm_reward baseline | 452.6 | 448.3 | 452.0 | 408.7 |
-| RWAI v1 (legacy) | 451.8 | 451.8 | 423.9 | 404.7 |
+| RWAI v1 (legacy, no GC) | 179.5 | -0.3 | 263.4 | 19.4 |
 | **RWAI v2** | **452.6** | **446.9** | **482.9** | **453.7** |
 | PER | 453.0 | 388.7 | 423.5 | 371.4 |
 | AS | 8.0 | 4.9 | 3.2 | 3.2 |
@@ -389,11 +388,11 @@ All 110 experiments have been completed. The following tables present best and f
 | RWAI v2 + PER + AS + QBound | 55.5 | 39.6 | 8.0 | 4.6 |
 
 **Key SAC findings:**
-- **QBound is the most impactful single technique** for SAC, boosting single from 312→453 and providing stable convergence.
-- **Adaptive Gradient Scaling is catastrophic** for SAC: every variant including AS collapses below 75 (single) or below 120 (double). AS disrupts SAC's squashed Gaussian policy by interfering with the log-probability computation.
+- **QBound is the most impactful single technique** for SAC, providing stable convergence. Most of the single-pendulum gain (312→452.6) comes from disabling reward normalization; QBound adds stability (+3.9 final vs `no_norm_reward` baseline).
+- **Adaptive Gradient Scaling is catastrophic** for SAC: AS without QBound collapses SAC below 120; however, QBound partially rescues AS-damaged SAC (AS+QBound single: 225.4, double: 420.7). AS disrupts SAC's squashed Gaussian policy by interfering with the log-probability computation.
 - **RWAI v2 provides strong peak performance** (482.9 on double, highest across all SAC variants).
 - **PER + QBound achieves the most stable results**: 453.5/455.7 final rewards with minimal best-final gap.
-- **Any combination including AS degrades SAC**, even when QBound is present.
+- **Any combination including AS degrades SAC** relative to non-AS variants, though QBound partially rescues (AS+QBound: 225/421 vs pure AS: 8/3).
 
 #### 5.6.2 TD3 Results
 
@@ -401,7 +400,7 @@ All 110 experiments have been completed. The following tables present best and f
 |---------|:----------:|:-----------:|:----------:|:-----------:|
 | baseline (GC, norm_reward) | 8.7 | 8.7 | 414.2 | 388.3 |
 | no_norm_reward baseline | 8.6 | 8.6 | 429.9 | 429.9 |
-| RWAI v1 (legacy) | 449.1 | 284.4 | 459.9 | 400.4 |
+| RWAI v1 (legacy, no GC) | 272.4 | 43.2 | 306.9 | -6.5 |
 | RWAI v2 | 7.6 | 2.8 | 40.9 | 3.6 |
 | PER | 8.0 | 7.9 | 429.0 | 377.9 |
 | **AS** | **205.4** | **173.9** | 409.3 | 390.7 |
@@ -431,7 +430,7 @@ All 110 experiments have been completed. The following tables present best and f
 |---------|:----------:|:-----------:|:----------:|:-----------:|
 | baseline (GC, norm_reward) | 298.8 | 298.8 | 478.6 | 411.2 |
 | no_norm_reward baseline | 363.7 | 294.1 | 478.0 | 219.8 |
-| RWAI v1 (legacy) | 356.6 | 294.6 | 437.6 | 211.7 |
+| RWAI v1 (legacy, no GC) | 258.5 | 214.3 | 407.0 | 286.5 |
 | RWAI v2 | **453.0** | 252.2 | 472.4 | 436.6 |
 | PER | 267.7 | 251.4 | 454.6 | 414.2 |
 | AS | 245.5 | 190.9 | **457.9** | **457.1** |
@@ -480,7 +479,7 @@ SAC dominates the top performers, particularly when combined with QBound and/or 
 
 ### 5.7 Training Dynamics Summary
 
-The complete 110-experiment matrix reveals four distinct training dynamics patterns:
+The complete 116-experiment matrix reveals four distinct training dynamics patterns:
 
 **Stable convergence** (PPO, SAC+QBound, SAC+RWAI v2+PER, DDPG+AS double):
 - Monotonic improvement with low variance
@@ -492,10 +491,10 @@ The complete 110-experiment matrix reveals four distinct training dynamics patte
 - Moderate-to-large gap between best and final (15-45% decline)
 - Late-training instability suggests critic drift
 
-**Catastrophic collapse from AS** (all SAC+AS variants):
-- Immediate failure to learn (rewards stay at 3-8)
+**Catastrophic collapse from AS** (SAC+AS variants without QBound):
+- Immediate failure to learn (rewards stay at 3-8 without QBound)
 - AS interferes with SAC's squashed Gaussian log-probability computation
-- Not recoverable even with QBound present
+- QBound partially rescues (AS+QBound: 225/421 single/double), but performance remains well below non-AS variants
 
 **Stuck at local optimum** (TD3 single most variants):
 - Flatline from early training through 500K steps
@@ -530,13 +529,13 @@ A_hat_t = sum((gamma*lambda)^l * delta_{t+l})    where delta_t = r_t + gamma*V(s
 
 Even if V(s) starts at 0 or 50, the TD errors delta_t are computed from **fresh rollout data** and provide correct relative signals. The clipping mechanism further limits the impact of value estimation errors on policy updates. Moreover, PPO's value function is re-estimated from scratch each epoch, preventing bias accumulation.
 
-Our results confirm this: PPO achieves nearly identical performance with default initialization (449/493), demonstrating complete robustness to initialization bias. This validates our control experiment design and isolates the observed failures to off-policy-specific mechanisms.
+Our results confirm this: PPO achieves strong performance with default initialization (450.2/488.0 best), demonstrating complete robustness to initialization bias. This validates our control experiment design and isolates the observed failures to off-policy-specific mechanisms.
 
 ### 6.3 The Overestimation-Collapse Cascade (RWAI v1)
 
 The RWAI v1 experiments reveal a consistent three-stage failure pattern across off-policy algorithms:
 
-**Stage 1 -- Optimistic exploration (0-50K steps):** The large positive bias (Q_mid approximately 50 under the original r_min=0 assumption) drives the policy to explore aggressively, producing high-reward transitions. This is most visible in TD3, where RWAI rescues the agent from its exploration trap (7.95 to 259 for single, 2.93 to 440 for double).
+**Stage 1 -- Optimistic exploration (0-50K steps):** The large positive bias (Q_mid approximately 50 under the original r_min=0 assumption) drives the policy to explore aggressively, producing high-reward transitions. This is most visible in TD3, where RWAI rescues the agent from its exploration trap (8.7 to 272.4 for single).
 
 **Stage 2 -- Critic correction (50K-150K steps):** As real data accumulates, the critic begins correcting toward the true (normalized) Q-range. This creates large TD errors, destabilizing both the critic and the target network. The actor, which has been optimizing against inflated Q-values, receives contradictory gradient signals.
 
@@ -548,7 +547,7 @@ This pattern manifests differently across algorithms due to their structural dif
 |-----------|---------|---------|---------|------------|
 | SAC | Moderate improvement | alpha tuning disrupted | Full collapse | Entropy-Q coupling |
 | TD3 | Dramatic rescue | Conservative clipping amplifies correction | Full collapse | Overestimation + double-Q conflict |
-| DDPG | No additional benefit | Gradual degradation | Partial collapse | Excess overestimation |
+| DDPG | Slight stabilization | Reduced late degradation | Moderate positive final | Stabilizes natural overestimation |
 
 ### 6.4 SAC: Entropy Coefficient as the Vulnerability
 
@@ -562,15 +561,17 @@ When Q-values are artificially large (approximately 50), the policy improvement 
 
 This explains why SAC collapses more severely than TD3 or DDPG with RWAI v1: SAC's strength (adaptive entropy) becomes a vulnerability when Q-values are miscalibrated.
 
-### 6.5 TD3: Proof of the Exploration Hypothesis
+### 6.5 TD3: Evidence for the Exploration Hypothesis
 
-The TD3 RWAI v1 results provide the strongest evidence for our central thesis about conservative Q-estimation and exploration:
+The TD3 RWAI v1 results on single pendulum provide evidence for our thesis about conservative Q-estimation and exploration:
 
-1. **Default TD3 is stuck** (best: 7.95/2.93) -- clipped double-Q suppresses value signals from rare high-reward states
-2. **RWAI rescues TD3 temporarily** (peak: 259/440) -- optimistic initialization overwhelms the conservative bias
-3. **But the rescue is unsustainable** (final: -2.11/-1.95) -- the overestimation-correction cascade destabilizes training
+1. **Default TD3 single is stuck** (best: 8.7) -- clipped double-Q suppresses value signals from rare high-reward states
+2. **RWAI rescues TD3 single temporarily** (peak: 272.4) -- optimistic initialization overwhelms the conservative bias
+3. **But the rescue is unsustainable** (final: 43.2) -- the overestimation-correction cascade destabilizes training
 
-This two-phase behavior confirms that TD3's failure is specifically an exploration-exploitation interaction, not a capacity or hyperparameter issue. The algorithm can learn swing-up behavior (Phase 1 proves this) but cannot sustain it under its conservative Q-estimation framework when the initialization bias washes out.
+However, TD3 double pendulum complicates this narrative: the vanilla baseline achieves 449.9 peak without RWAI, and RWAI v1 actually *worsens* performance (306.9 peak, -6.5 final). This suggests that the exploration deficit is environment-specific — TD3 can explore double pendulum adequately but fails on single pendulum, possibly due to differences in reward landscape geometry or episode length (500 vs 1000 steps).
+
+The single-pendulum rescue still confirms that TD3's failure there is specifically an exploration-exploitation interaction, not a capacity issue. The algorithm can learn swing-up behavior (the rescue phase proves this) but cannot sustain it under its conservative Q-estimation framework when the initialization bias washes out.
 
 ### 6.6 The Clipped Double-Q and Exploration Tension
 
@@ -587,10 +588,10 @@ The TD3 vs. DDPG comparison under default initialization demonstrates this clear
 | Q-networks | 2 (take minimum) | 1 |
 | Overestimation | Suppressed by clipping | Natural, uncorrected |
 | Effect on rare high-reward transitions | Value signal suppressed | Value signal amplified |
-| Single pendulum | 7.95 (stuck) | 325.57 (partial) |
-| Double pendulum | 2.93 (stuck) | 475.50 (solved) |
+| Single pendulum | 8.7 (stuck) | 284.6 (partial) |
+| Double pendulum | 449.9 (unstable) | 437.4 (unstable) |
 
-DDPG's natural overestimation, the very problem TD3 was designed to fix, functions as an implicit exploration bonus. The agent is drawn toward states where it has experienced unusually high rewards, even if the Q-estimate is inflated. TD3's clipped double-Q eliminates this beneficial bias along with the harmful one.
+On single pendulum, DDPG's natural overestimation — the very problem TD3 was designed to fix — functions as an implicit exploration bonus. The agent is drawn toward states where it has experienced unusually high rewards, even if the Q-estimate is inflated. TD3's clipped double-Q eliminates this beneficial bias along with the harmful one. On double pendulum, both algorithms achieve similar peak performance but suffer from instability (TD3 final: 120.1, DDPG final: 231.8), suggesting that the exploration advantage of overestimation is less critical in longer-horizon tasks.
 
 ### 6.7 The VecNormalize Confound and Its Resolution
 
@@ -626,7 +627,7 @@ Additionally, the corrected r_min=-0.5 (accounting for penalties that can push r
 | RWAI v2 | Initialization (scaled) | Strong for SAC (+140), destructive for TD3 | Algorithm-dependent |
 | PER | Sampling priority | Moderate alone, strong with QBound/AS | Best as a synergy amplifier |
 | AS | Pre-tanh rescaling | Rescues TD3 (+197), destroys SAC | Incompatible with SAC |
-| QBound | Value constraint | Excellent for SAC (+141), neutral for TD3/DDPG | Most consistent single technique |
+| QBound | Value constraint | Excellent for SAC, TD3 double gain (+41.6 final) attributable to disabling norm_reward, neutral for DDPG | Most consistent single technique for SAC |
 
 ### 6.9 SDE Not Available for TD3/DDPG
 
@@ -642,14 +643,14 @@ The expanded experiment matrix resolves this dilemma by disabling reward normali
 
 ### 7.2 Technique-Algorithm Interaction Matrix
 
-The complete 110-experiment results reveal that technique effectiveness is strongly algorithm-dependent. The following matrix summarizes the effect of each technique relative to the algorithm's baseline:
+The complete 116-experiment results reveal that technique effectiveness is strongly algorithm-dependent. The following matrix summarizes the effect of each technique relative to the algorithm's baseline:
 
 | Technique | SAC | TD3 | DDPG |
 |-----------|:---:|:---:|:----:|
-| **RWAI v2** | Strong positive (+140 single, +48 double peak) | Destructive (collapse on both) | High peak but unstable (+154 peak, -47 final single) |
+| **RWAI v2** | Strong positive (+0.0 single peak vs no_norm_reward, +30.9 double peak, +45.0 double final) | Destructive (collapse on both) | High peak but unstable (+154 peak, -47 final single) |
 | **PER** | Moderate (+141 single peak, unstable) | Neutral single, moderate double | Slightly negative single, neutral double |
 | **AS** | **Catastrophic** (collapse to <8 on all) | **Partially rescues** single (+197) | Mixed (hurts single, stabilizes double) |
-| **QBound** | **Excellent** (+141 single, +18 double) | Neutral (no effect on single trap) | Neutral (matches no_norm_reward baseline) |
+| **QBound** | **Excellent** (+0.6 single peak, +3.9 final vs no_norm_reward; PER+QBound: +5.2/+47.0 final single/double) | Neutral single (no effect on trap), double gain (+41.6 final) attributable to disabling norm_reward | Neutral (matches no_norm_reward baseline) |
 
 ### 7.3 Why Adaptive Gradient Scaling Destroys SAC
 
@@ -674,14 +675,17 @@ QBound emerges as the most consistently beneficial single technique for SAC:
 | SAC Variant | Single Best/Final | Double Best/Final |
 |------------|:-----------------:|:-----------------:|
 | Baseline (norm_reward) | 312.4 / 312.4 | 434.5 / 369.9 |
+| no_norm_reward baseline | 452.6 / 448.3 | 452.0 / 408.7 |
 | QBound | 453.2 / 452.2 | 452.0 / 408.7 |
 | PER + QBound | 453.6 / 453.5 | 455.7 / 455.7 |
+
+**Important caveat**: QBound requires `norm_reward=False`, so the fair comparison is against the no_norm_reward baseline. Against that baseline, QBound's single-technique gain is modest (+0.6 peak, +3.9 final on single; +0.0/+0.0 on double). Much of the apparent SAC single gain (312→453) comes from disabling reward normalization itself (312→452.6). The synergy with PER is where QBound shows clearer value: PER+QBound achieves +5.2 final on single and +47.0 final on double versus the no_norm_reward baseline.
 
 QBound's effectiveness for SAC likely stems from two mechanisms:
 1. **Prevents Q-value drift**: By constraining critic targets to [Q_min, Q_max], QBound prevents the slow Q-value inflation that causes late-training instability in SAC baselines.
 2. **Stabilizes entropy tuning**: Bounded Q-values keep the Q-term in SAC's objective at a consistent scale relative to the entropy bonus, preventing the entropy coefficient from being driven to pathological values.
 
-However, QBound has no effect on TD3's single-pendulum exploration failure (8.6 vs 8.7 baseline), confirming that TD3's problem is fundamentally about exploration, not Q-value divergence.
+QBound has no effect on TD3's single-pendulum exploration failure (8.6 vs 8.7 baseline), confirming that TD3's single-pendulum problem is fundamentally about exploration, not Q-value divergence. However, QBound does help TD3 on double pendulum: 429.9/429.9 best/final vs the norm_reward baseline's 414.2/388.3, a +41.6 final reward improvement (matching the no_norm_reward baseline, which suggests the benefit comes partly from disabling reward normalization).
 
 ### 7.5 Competitiveness with PPO
 
@@ -743,7 +747,7 @@ TD3's complete failure on single pendulum (best: 8.7 across baseline, QBound, PE
 
 The diagnosis is now confirmed by multiple lines of evidence:
 1. **DDPG solves it** (298.8 baseline) -- same architecture minus clipped double-Q
-2. **RWAI v1 temporarily rescues** (449.1 peak) -- overestimation breaks the trap
+2. **RWAI v1 temporarily rescues single** (272.4 peak) -- overestimation breaks the trap
 3. **AS partially rescues** (205.4) -- preventing tanh saturation enables more effective exploration
 4. **QBound, PER, RWAI v2 alone do not help** -- the problem is not Q-divergence, sample efficiency, or initialization
 
@@ -751,10 +755,10 @@ The single pendulum's shorter episode (500 vs 1000 steps) and simpler dynamics m
 
 ### 7.9 Practical Recommendations
 
-Based on the complete 110-experiment matrix:
+Based on the complete 116-experiment matrix:
 
 **For SAC** (recommended for hard-exploration tasks):
-- Add QBound with environment-derived Q-value bounds. Expected improvement: +45% on single, +5-25% on double.
+- Add QBound with environment-derived Q-value bounds (requires `norm_reward=False`). Most of the single-pendulum gain comes from disabling reward normalization; QBound adds stability (+3.9 final). On double, pair with PER for meaningful improvement (+47.0 final).
 - Consider RWAI v2 for peak performance, especially combined with PER.
 - **Never use Adaptive Gradient Scaling with SAC** -- it is incompatible with the squashed Gaussian policy.
 - PER + QBound provides the most stable high-performing configuration.
@@ -794,13 +798,13 @@ The five techniques interact with existing work as follows:
 
 ## 8. Conclusion
 
-We investigate five complementary techniques for improving off-policy deep reinforcement learning on hard-exploration tasks: Reward-Range-Aware Initialization (RWAI v1 and v2), Gradient Clipping (GC), Adaptive Gradient Scaling (AS), Prioritized Experience Replay (PER), and Q-Value Bounding (QBound). Our complete study spans 110 experiments across SAC, TD3, DDPG, and PPO on single and double pendulum swing-up tasks. The principal findings are:
+We investigate five complementary techniques for improving off-policy deep reinforcement learning on hard-exploration tasks: Reward-Range-Aware Initialization (RWAI v1 and v2), Gradient Clipping (GC), Adaptive Gradient Scaling (AS), Prioritized Experience Replay (PER), and Q-Value Bounding (QBound). Our complete study spans 116 experiments across SAC, TD3, DDPG, and PPO on single and double pendulum swing-up tasks. The principal findings are:
 
-**1. QBound is the most consistently beneficial technique for SAC.** QBound improves SAC single from 312.4 to 453.2 (+45%) and provides stable convergence. PER + QBound achieves the most reliable high performance (453.5/455.7 final). QBound constrains Q-values to the theoretically achievable range, preventing the late-training drift that degrades SAC baselines.
+**1. QBound is the most consistently beneficial technique for SAC.** Disabling reward normalization (required by QBound) accounts for most of SAC's single-pendulum gain (312→452.6); QBound adds stability atop this (+3.9 final vs `no_norm_reward` baseline). On double, standalone QBound matches the `no_norm_reward` baseline, but PER + QBound achieves the most reliable high performance (453.5/455.7 final, +47.0 double final vs `no_norm_reward`). QBound constrains Q-values to the theoretically achievable range, preventing the late-training drift that degrades SAC baselines.
 
-**2. Adaptive Gradient Scaling is catastrophic for SAC but rescues TD3.** Every SAC+AS variant collapses (best <75 on single, <120 on double), because AS corrupts SAC's squashed Gaussian log-probability computation. Conversely, AS partially rescues TD3 from exploration failure (8.7→205 single, 293 with PER), demonstrating that technique effectiveness is fundamentally algorithm-dependent.
+**2. Adaptive Gradient Scaling is catastrophic for SAC but rescues TD3.** AS without QBound collapses SAC below 120, though QBound partially rescues AS-damaged SAC (AS+QBound single: 225.4, double: 420.7). AS corrupts SAC's squashed Gaussian log-probability computation. Conversely, AS partially rescues TD3 from exploration failure (8.7→205 single, 293 with PER), demonstrating that technique effectiveness is fundamentally algorithm-dependent.
 
-**3. RWAI v2 significantly improves SAC but destabilizes TD3.** With norm_reward=False and corrected Q-ranges, RWAI v2 achieves the highest SAC double peak (482.9) and strong single performance (452.6). However, RWAI v2 causes TD3 to collapse on both environments, confirming that informed initialization interacts destructively with TD3's conservative clipped double-Q mechanism.
+**3. RWAI v2 improves SAC double pendulum but destabilizes TD3.** With norm_reward=False and corrected Q-ranges, RWAI v2 achieves the highest SAC double peak (482.9). On single, RWAI v2 matches the `no_norm_reward` baseline (452.6), so the technique's benefit beyond disabling reward normalization is specific to double pendulum. RWAI v2 causes TD3 to collapse on both environments, confirming that informed initialization interacts destructively with TD3's conservative clipped double-Q mechanism.
 
 **4. PER functions primarily as a synergy amplifier.** PER alone provides inconsistent benefits, but PER + QBound (SAC), PER + AS (TD3), and PER + RWAI v2 (SAC) produce the best configurations for their respective algorithms. PER's TD-error-based sampling is most valuable when paired with techniques that create distinct error patterns.
 

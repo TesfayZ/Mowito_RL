@@ -184,7 +184,7 @@ def plot_v1_vs_v2_comparison(results_dir="results"):
 
     # Colors for each variant
     variant_colors = {
-        "baseline": "#1f77b4",  # blue
+        "vanilla baseline": "#1f77b4",  # blue
         "v1": "#ff7f0e",       # orange
         "v2": "#2ca02c",       # green
     }
@@ -196,12 +196,13 @@ def plot_v1_vs_v2_comparison(results_dir="results"):
             ax = axes[row, col]
 
             # Experiment names for this cell
-            baseline_name = f"{algo}_{env}"
+            # Use vanilla baseline (no GC, norm_reward=True) for fair v1 comparison
+            vanilla_name = f"{algo}_{env}_vanilla"
             v1_name = f"{algo}_{env}_rwinit"
             v2_name = f"{algo}_{env}_rwinit_v2"
 
             variants = {
-                "baseline": baseline_name,
+                "vanilla baseline": vanilla_name,
                 "v1": v1_name,
                 "v2": v2_name,
             }
@@ -233,8 +234,8 @@ def plot_v1_vs_v2_comparison(results_dir="results"):
 
     # Print summary table
     _print_summary_table(results_dir, algos, envs, algo_labels,
-                         ["baseline", "v1", "v2"],
-                         {"baseline": "", "v1": "_rwinit", "v2": "_rwinit_v2"})
+                         ["vanilla baseline", "v1", "v2"],
+                         {"vanilla baseline": "_vanilla", "v1": "_rwinit", "v2": "_rwinit_v2"})
 
 
 def plot_full_comparison(results_dir="results"):

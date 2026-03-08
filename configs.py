@@ -754,7 +754,8 @@ PER_BETA_FINAL = 1.0   # Final IS weight exponent (annealed linearly)
 #   QBound    — Q-value bounding to theoretical range
 #
 # This gives 2^4 = 16 variants × 3 algos × 2 envs = 96 off-policy experiments,
-# plus 2 PPO baselines and 6 legacy RWAI v1 experiments = 104 total.
+# plus 2 PPO baselines, 6 legacy RWAI v1, 6 vanilla baselines (for v1 comparison),
+# and 6 norm_reward=False baselines = 116 total.
 
 EXPERIMENTS = {}
 
@@ -908,8 +909,26 @@ for algo in _ALGOS:
             "max_grad_norm": 1.0,
         }
 
-# ── Legacy RWAI v1 (bias-only, retained for reference) ───────────────────────
-# These use vanilla algo classes (no GC) to preserve original experiment conditions.
+# ── Vanilla baselines (no GC, norm_reward=True) for RWAI v1 comparison ───────
+# These reproduce the original baseline conditions (before GC was added) so the
+# v1 legacy table has a fair "Default" comparison column.
+for algo in _ALGOS:
+    for env_name, env_info in _ENVS.items():
+        _base_config = _CONFIG_MAP[(algo, env_name, False, False)]
+        exp_name = f"{algo}_{env_name}_vanilla"
+        EXPERIMENTS[exp_name] = {
+            "env_id": env_info["env_id"],
+            "algo": algo.upper(),
+            "config": _base_config,
+            "timesteps": TOTAL_TIMESTEPS,
+            "n_envs": 1,
+            "seed": SEED,
+        }
+
+# ── Legacy RWAI v1 (bias-only, retained for diagnostic reference) ────────────
+# These use vanilla algo classes (no GC) and norm_reward=True (default) to
+# reproduce the original VecNormalize confound: critic bias set to Q_mid ≈ 25
+# while VecNormalize rescales rewards to ≈[0, 10], causing overestimation.
 for algo in _ALGOS:
     for env_name, env_info in _ENVS.items():
         _rwinit_config = {
@@ -922,11 +941,9 @@ for algo in _ALGOS:
         }
         EXPERIMENTS[f"{algo}_{env_name}_rwinit"] = {
             "env_id": env_info["env_id"],
-            "algo": algo.upper() + "_GC",
+            "algo": algo.upper(),
             "config": _rwinit_config[(algo, env_name)],
             "timesteps": TOTAL_TIMESTEPS,
             "n_envs": 1,
             "seed": SEED,
-            "norm_reward": False,
-            "max_grad_norm": 1.0,
         }
