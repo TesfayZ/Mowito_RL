@@ -1,5 +1,5 @@
 """
-Comprehensive experiment runner for Mowito.
+Comprehensive experiment runner for RL stabilization ablation study.
 
 Organizes and runs all experiments in logical groups:
   - PPO baselines (on-policy, no contributions needed)
@@ -102,7 +102,7 @@ def filter_experiments(experiments, algo=None, env=None):
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Comprehensive experiment runner for Mowito",
+        description="Comprehensive experiment runner for RL stabilization ablation study",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Experiment Matrix:
@@ -171,7 +171,7 @@ Contributions ablated combinatorially:
 
     # Display plan
     print(f"\n{'='*70}")
-    print(f"Mowito Experiment Runner")
+    print(f"RL Stabilization Experiment Runner")
     print(f"{'='*70}")
     print(f"  Group: {args.group}")
     if args.algo:

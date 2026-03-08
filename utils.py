@@ -1,4 +1,4 @@
-"""Shared utilities for Mowito algorithm subclasses."""
+"""Shared utilities for algorithm subclasses."""
 
 from custom_policies import AdaptiveGradientScaler
 

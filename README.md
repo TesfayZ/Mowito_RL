@@ -1,4 +1,4 @@
-# Mowito: Combinatorial Ablation of Training Stabilization Techniques for Off-Policy Deep RL
+# Combinatorial Ablation of Training Stabilization Techniques for Off-Policy Deep RL
 
 A comprehensive **110-experiment** study evaluating how five complementary techniques — critic initialization, gradient clipping, adaptive scaling, Q-value bounding, and prioritized experience replay — affect off-policy algorithm performance on hard-exploration continuous control tasks.
 
@@ -256,11 +256,11 @@ Also available as LaTeX: [report/paper.tex](report/paper.tex).
 If you use this work in your research, please cite:
 
 ```bibtex
-@misc{gebrekidan2026mowito,
+@misc{gebrekidan2026combinatorial,
   author       = {Gebrekidan, Tesfay Zemuy},
   title        = {Critic Initialization, Gradient Stabilization, and Q-Value Regularization for Off-Policy Deep Reinforcement Learning},
   year         = {2026},
-  url          = {https://github.com/TesfayZ/Mowito_RL}
+  url          = {https://github.com/TesfayZ/RL-Stabilization-Ablation}
 }
 ```
 

@@ -1,5 +1,5 @@
 """
-Custom policy classes for Mowito experiments.
+Custom policy classes for RL stabilization experiments.
 
 Contains:
 1. **RWAI (Reward-Range-Aware Initialization)**: Two variants that initialize
