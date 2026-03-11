@@ -156,11 +156,11 @@ where $\mu=0.1$ is the cart friction coefficient. These are solved analytically 
 
 Both environments use 4th-order Runge--Kutta (RK4) integration with sub-stepping (2 steps single, 4 steps double) for numerical stability. Angles are represented as $\sin/\cos$ pairs to avoid discontinuity at $\pm\pi$. The cart terminates at $|x| > 2.4$\,m.
 
-\textbf{Reward:}
+\textbf{Reward (single pendulum):}
 \begin{equation}
 r = \underbrace{\tfrac{\cos\theta + 1}{2}}_{\text{uprightness}} - \underbrace{0.01\,x^2}_{\text{cart}} - \underbrace{0.001\,a^2}_{\text{control}} - \underbrace{0.002\,u^4\dot{\theta}^2}_{\text{velocity}}
 \end{equation}
-where $u = (\cos\theta+1)/2$ is the uprightness factor. The smooth $u^4$ activation avoids reward discontinuity near the upright position. Reward range: $[-0.5, 1.0]$ per step.
+where $u = (\cos\theta+1)/2$ is the uprightness factor. The smooth $u^4$ activation avoids reward discontinuity near the upright position. The double pendulum reward uses a weighted combination of individual pole uprightness ($0.4$ each) and normalized tip height ($0.2$), with cart penalty coefficient $0.005$. Reward range: $[-0.5, 1.0]$ per step for both environments.
 
 \subsection{Algorithms and Experiment Matrix}
 
@@ -381,7 +381,11 @@ The AdaptiveGradientScaler remaps $u_i$ based on running statistics, changing th
 
 \subsection{QBound as Q-Value Regularization}
 
-QBound constrains Q-values to $[Q_{\min}, Q_{\max}]$, preventing the late-training drift that degrades SAC baselines. Since QBound requires \texttt{norm\_reward=False}, fair comparison uses the \texttt{no\_norm\_reward} baseline: most of the SAC single-pendulum gain ($312 \to 452.6$) comes from disabling reward normalization; QBound adds stability ($452.2$ vs.\ $448.3$ final). On double pendulum, QBound alone matches the \texttt{no\_norm\_reward} baseline exactly ($452.0/408.7$), but PER+QBound achieves substantially better stability ($455.7/455.7$). The mechanism is twofold: (1)~preventing Q-value inflation maintains critic accuracy; (2)~bounded Q-values keep the entropy term at consistent relative scale, stabilizing $\alpha$-tuning. QBound on TD3 single has no effect on the exploration failure (8.6 vs.\ 8.7). On TD3 double, QBound achieves $429.9/429.9$ vs.\ baseline $414.2/388.3$ ($+41.6$ final), but this matches the \texttt{no\_norm\_reward} baseline exactly ($429.9/429.9$), suggesting the gain comes from disabling reward normalization rather than from QBound's clipping mechanism.
+QBound constrains Q-values to $[Q_{\min}, Q_{\max}]$, preventing the late-training drift that degrades SAC baselines. Since QBound requires \texttt{norm\_reward=False}, fair comparison uses the \texttt{no\_norm\_reward} baseline: most of the SAC single-pendulum gain ($312 \to 452.6$) comes from disabling reward normalization; QBound adds stability ($452.2$ vs.\ $448.3$ final). On double pendulum, QBound alone matches the \texttt{no\_norm\_reward} baseline exactly ($452.0/408.7$), but PER+QBound achieves substantially better stability ($455.7/455.7$). The mechanism is twofold: (1)~preventing Q-value inflation maintains critic accuracy; (2)~bounded Q-values keep the entropy term at consistent relative scale, stabilizing $\alpha$-tuning.
+
+\textbf{When does QBound actually fire?} Comparing RWAI~v2+QBound against RWAI~v2 alone (a fair comparison since both use \texttt{norm\_reward=False}) reveals that results are identical across all three algorithms on both environments---QBound's clipping never activates when RWAI~v2 is present, because the well-calibrated initialization keeps Q-values within the theoretical bounds. Similarly, standalone QBound matches the \texttt{no\_norm\_reward} baseline exactly for TD3 ($8.6/8.6$ single, $429.9/429.9$ double) and DDPG ($363.7/294.1$ single, $478.0/219.8$ double), confirming that QBound's clipping mechanism never fires for these algorithms---their Q-values naturally remain within $[Q_{\min}, Q_{\max}]$. Only SAC's entropy-driven exploration pushes Q-values outside the theoretical bounds, producing the modest single-pendulum stability gain ($+3.9$ final) and the substantial PER+QBound synergy on double ($+47.0$ final).
+
+\textbf{Is QBound risk-free?} In the fair RWAI~v2 comparisons, QBound is neutral in most combinations (identical results). However, when QBound does activate in AS-containing configurations, effects can be mixed: SAC RWAI~v2+PER+QBound on double achieves a higher peak ($463.1$ vs.\ $456.1$) but lower final ($424.7$ vs.\ $444.7$, $-20.0$) compared to RWAI~v2+PER without QBound. QBound is thus best characterized as \emph{low-risk} rather than zero-risk: it is inert when Q-values stay in range, beneficial for SAC in standard configurations, but can interact unpredictably with AS-damaged training dynamics.
 
 \subsection{PER as Synergy Amplifier}
 
@@ -460,7 +464,7 @@ Our results map a spectrum from harmful underestimation (TD3 default: 8.7) throu
 We present a comprehensive 116-experiment ablation study of five complementary techniques for off-policy deep RL. The principal findings are:
 
 \begin{enumerate}
-\item \textbf{QBound provides the most stable SAC performance.} Against the fair \texttt{no\_norm\_reward} baseline, QBound adds stability rather than raw improvement; PER + QBound achieves the highest stable finals ($453.5$ single, $455.7$ double). The headline gain ($312 \to 453$) is primarily from disabling reward normalization, which QBound requires.
+\item \textbf{QBound provides the most stable SAC performance.} Against the fair \texttt{no\_norm\_reward} baseline, QBound adds stability rather than raw improvement; PER + QBound achieves the highest stable finals ($453.5$ single, $455.7$ double). The headline gain ($312 \to 453$) is primarily from disabling reward normalization, which QBound requires. QBound's clipping is inert for TD3 and DDPG (Q-values naturally stay within bounds) and activates only for SAC, where entropy-driven exploration pushes estimates outside the theoretical range. QBound is low-risk---neutral when it does not fire---though it can interact unpredictably with AS-damaged training dynamics.
 
 \item \textbf{Adaptive Gradient Scaling is catastrophic for SAC without QBound but rescues TD3}---the same technique that corrupts SAC's log-probability computation enables TD3 to partially escape exploration failure ($8.7 \to 205$). Notably, QBound partially rescues AS-damaged SAC (AS+QBound: $225/421$ single/double vs.\ pure AS: $8/3$).
 

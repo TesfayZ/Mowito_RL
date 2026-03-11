@@ -227,7 +227,7 @@ Reward range: `[-0.5, 1.0]` per step. Velocity penalty uses smooth `upright⁴` 
 | **RWAI v2** | Strong positive | Destructive | High peak, unstable |
 | **PER** | Moderate alone, strong with QBound/AS/RWAI v2 | Neutral alone, strong with AS | Mixed |
 | **AS** | **Catastrophic** without QBound; QBound partially rescues | **Partially rescues** exploration | Mixed |
-| **QBound** | **Excellent** stability (gain mostly from disabling norm_reward) | Neutral single, positive double (gain partly from disabling norm_reward) | Neutral |
+| **QBound** | **Excellent** stability (gain mostly from disabling norm_reward) | Neutral single, positive double (gain entirely from disabling norm_reward) | Neutral |
 
 ### Key Findings
 
