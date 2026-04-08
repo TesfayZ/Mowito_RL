@@ -852,7 +852,7 @@ Multi-seed evaluation across a broader range of environments would establish gen
 
 [14] O. Eberhard, J. Hollenstein, C. Pinneri, G. Martius, "Pink Noise Is All You Need: Colored Noise Exploration in Deep Reinforcement Learning," ICLR, 2023.
 
-[15] A. Raffin, "Generalized State-Dependent Exploration for Deep Reinforcement Learning in Robotics," arXiv:2005.05719, 2020.
+[15] A. Raffin, J. Kober, and F. Stulp, "Smooth Exploration for Robotic Reinforcement Learning," arXiv:2005.05719, 2020.
 
 [16] T. Schaul, J. Quan, I. Antonoglou, D. Silver, "Prioritized Experience Replay," ICLR, 2016.
 
